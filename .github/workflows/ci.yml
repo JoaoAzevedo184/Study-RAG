@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela execuções antigas do mesmo branch/PR ao receber um novo push.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # 1) Valida que o contrato (fonte de verdade) é um OpenAPI bem formado.
+  contract:
+    name: Validate OpenAPI contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate contract
+        run: npx --yes @openapitools/openapi-generator-cli@2.x validate -i study-rag-openapi.yml
+
+  # 2) Compila e roda os testes reais do backend (o pom.xml vive em backend/).
+  backend:
+    name: Build & test backend
+    runs-on: ubuntu-latest
+    needs: contract
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Build & test
+        run: ./mvnw -B --no-transfer-progress clean verify
+
+      - name: Publish test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/target/surefire-reports/
+          if-no-files-found: ignore
