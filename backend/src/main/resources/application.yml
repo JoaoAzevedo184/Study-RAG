@@ -49,6 +49,16 @@ studyrag:
     chunk:
       size: 1000
       overlap: 200
+  # Recuperação por similaridade (UC-5 / RN-8). MVP: sem hybrid search nem reranking.
+  retrieval:
+    # Chunks recuperados quando o pedido não informa topK (contrato: 5).
+    default-top-k: 5
+    # Score mínimo (cosseno normalizado) para um chunk ser relevante; abaixo ⇒ "não sei".
+    similarity-threshold: 0.5
+  # Geração da resposta fundamentada (RN-6/RN-7). O provedor (Ollama padrão, Groq
+  # alternável) é definido em spring.ai acima; esta camada é agnóstica ao provedor.
+  generation:
+    no-answer-message: "Não encontrei essa informação nos documentos disponíveis."
 
 management:
   endpoints:
